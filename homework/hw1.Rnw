@@ -1,0 +1,541 @@
+\documentclass[12pt,addpoints]{exam}
+% uncomment for exam with solutions
+\printanswers
+%\pointsinmargin
+%\marginpointname{ pts}
+\bracketedpoints
+%\pagestyle{empty}
+%\qformat{Question \thequestion\dotfill \emph{\totalpoints\ points}}
+
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{comment}
+\usepackage{amsthm}
+\usepackage{color}
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+
+\newcommand{\bA}{\ensuremath{\boldsymbol{A}}}
+\newcommand{\bB}{\ensuremath{\boldsymbol{B}}}
+\newcommand{\bC}{\ensuremath{\boldsymbol{C}}}
+\newcommand{\bD}{\ensuremath{\boldsymbol{D}}}
+\newcommand{\bE}{\ensuremath{\boldsymbol{E}}}
+\newcommand{\bg}{\ensuremath{\boldsymbol{g}}}
+\newcommand{\bG}{\ensuremath{\boldsymbol{G}}}
+\newcommand{\bI}{\ensuremath{\boldsymbol{I}}}
+\newcommand{\bM}{\ensuremath{\boldsymbol{M}}}
+\newcommand{\bT}{\ensuremath{\boldsymbol{T}}}
+\newcommand{\bX}{\ensuremath{\boldsymbol{X}}}
+\newcommand{\bx}{\ensuremath{\boldsymbol{x}}}
+\newcommand{\by}{\ensuremath{\boldsymbol{y}}}
+\newcommand{\bZ}{\ensuremath{\boldsymbol{Z}}}
+\newcommand{\bbeta}{\ensuremath{\boldsymbol{\beta}}}
+\newcommand{\bepsilon}{\ensuremath{\boldsymbol{\epsilon}}}
+\newcommand{\bone}{\ensuremath{\boldsymbol{1}}}
+\newcommand{\R}{\texttt{R}}
+\newcommand{\Rcode}[1]{\texttt{#1}}
+
+\begin{document}
+<<include=FALSE>>= 
+knit_hooks$set(document=function(x){ 
+  sub('\\usepackage{framed}', '', x, fixed=TRUE) 
+}) 
+@
+
+
+\begin{center}
+\section*{Homework 1}
+\end{center}
+
+\noindent \textbf{Rules:}  You may work together.  You may share code.  You \textit{must} write up independent solutions with your own conclusions and analysis to turn in.
+Please also insure that one copy of each piece of code used to get answers is provided to the instructor.
+
+\begin{questions}
+
+\question Out of the pressure of the classroom, let's explore the modeling exercise we did in class. \\
+\textbf{Knowledge:} Assume all transcripts human cells transcribe are known. \\
+\textbf{Hypothesis and Question:}
+A human cell of type A has different transcript levels from a human cell of type B (\textit{e.g.}~one cancerous, other not), (and these transcript levels can reveal the cause of cancer).  Which transcripts are differentially expressed? \\
+\textbf{Experiment:}
+\begin{itemize}
+\item Materials: one cell of type A, one cell of type B.
+\item Randomly sample $n$ mRNA from each cell.
+\item Unambiguously identify the transcript of each mRNA.
+\end{itemize}
+The data are counts $\bX_i = (X_{i1},X_{i2},\ldots,X_{im})$, where $i\in\{A,B\}$ indexes the cell and $m$ is the total number of possible transcripts.
+We will focus on the single gene $j$, though one could also model the entire multivariate vector.
+Notice, that the components of the vectors are not independent: as one count, say $X_{ij}$ increases, other counts $X_{ik}, k\neq j$ will tend to decrease because the total number of transcripts in the cell is finite.
+Fortunately, if $m$ is large and more specifically many members of vector $\bX_i$ are non-zero, then the components of the vector are nearly independent.
+Bioinformaticians make use of this fact all the time in RNA-seq experiments; it allows them to handle one gene at a time.
+\begin{parts}
+\part If cell $A$ has $T_A$ total mRNAs and cell $B$ has $T_B$ total mRNAs, not necessarily equal, and the sample size $n$ is \textit{not} much smaller than $T_A$ (or $T_B$) and sampling is without replacement, specify a distribution for the data under $H_0$.  Continue to assume this model until directed not to.
+
+%%%%%%
+\begin{solution}
+\[ X_{ij} \sim H(T_i, \theta_{ij}, n), \]
+where $H(\cdot)$ is the hypergeometric distribution and $\theta_{ij}$ is the unknown parameter representing the number of transcript $j$ in cell $i \in \{A,B\}$.
+\end{solution}
+%%%%%%
+
+\part Hypothesis testing consists of several parts (you can read more about it in the Stat 342 notes):
+	\begin{itemize}
+	\item A \textbf{model}, which you have already specified.
+	\item The \textbf{null} ($H_0$) and \textbf{alternative} ($H_a$) hypotheses.
+	\item A {\bf test statistic}, $T(\bX)$, some function of the data $\bX$, and a sampling distribution for the $T(\bX)$ under $H_0$.
+	\item A {\bf significance level} ($\alpha$).
+	\item A {\bf rejection region} ($R_R$).
+	\end{itemize}
+The null hypothesis $H_0$ is a statement about population parameters in your model.
+When there are no differentially expressed genes in the two cells, what is true about the parameters of the distribution you named, \textit{i.e.}~what is $H_0$?
+\begin{solution}
+\[H_0: \frac{\theta_{Aj}}{T_A} = \frac{\theta_{Bj}}{T_B}\]
+\end{solution}
+
+\part Since $H_0$ is a statement about population parameters, a frequently useful test statistic is the maximum likelihood estimator (MLE) of the involved parameters, especially since the MLE is functionally invariant meaning that the MLE of some function of a parameter, $\widehat{f(\theta)}$, is in most cases (see Stat 342 for details), the function applied to the MLE of the parameter: $f(\hat\theta)$, where $\hat\cdot$ is used to indicate the MLE.
+
+\part Is it possible to obtain MLEs of the parameters in your model?  (Don't attempt it, rather do a little Google searching and report what you find.)
+\begin{solution}
+It seems impossible to obtain MLEs of the parameters in the model.
+\end{solution}
+
+\part Now suppose $n\ll T_i$ for $i\in\{A,B\}$.  While the model you proposed above is still valid, what other model with fewer parameters is now plausible for these data?
+\begin{solution}
+Since $n \ll T_i$, the sampling procedure can be consider as with replacement. 
+\[X_{ij} \sim B(n, \theta_{ij}),\]
+where $B(\cdot)$ is binomial distribution and $\theta_{ij}$ is the unknown proportion of transcript $j$ among all transcripts in cell $i$.
+\end{solution}
+
+\part What is $H_0$ for this model?
+\begin{solution}
+Still, 
+\[H_0: \theta_{Aj} = \theta_{Bj}\]
+\end{solution}
+
+
+\part Another convenient test for hypotheses about population parameters is the likelihood ratio test (LRT).
+It is useful when the null hypothesis imposes constraints on parameters in the more general model of the alternative hypothesis.
+Read about it in the Stat 342 notes or anywhere else (there are lots of resources; it is a common test) and implement it for this problem, first generically for any data $X_{Aj}, X_{Bj}$, and then specifically for $n=100, X_{Aj}=3$, and $X_{Bj} = 10$.
+\begin{solution}
+
+\[H_0: \theta_{Aj} = \theta_{Bj}\]
+\[H_1: \theta_{Aj} \ne \theta_{Bj}\]
+\begin{equation*}
+\begin{split}
+\lambda & = \frac{\max_{\theta_{Aj} = \theta_{Bj}}L(\Theta; X)}{\max_{\Theta} L(\Theta;X)} \\
+   &= \frac{\max_{\theta} [\theta^{X_{Aj} + X_{Bj}} (1-\theta)^{2n-X_{Aj}-X_{Bj}} ]}
+{\max_{\theta_{Aj},\theta_{Bj}} [\theta_{Aj}^{X_{Aj}}\theta_{Bj}^{X_{Bj}} (1-\theta_{Aj})^{n-X_{Aj}} (1-\theta_{Bj})^{n-X_{Bj}}]} \\
+   &= \frac{ (\frac{X_{Aj}+X_{Bj}}{2n})^{X_{Aj} + X_{Bj}} (1-\frac{X_{Aj}+X_{Bj}}{2n})^{2n-X_{Aj}-X_{Bj}} }
+{ (\frac{X_{Aj}}{n} )^{X_{Aj}} (\frac{X_{Bj}}{n})^{X_{Bj}} (1-\frac{X_{Aj}}{n})^{n-X_{Aj}} (1-\frac{X_{Bj}}{n})^{n-X_{Bj}}  } \\
+\end{split}
+\end{equation*}
+
+<<>>==
+a1 = 13/200;
+h0=a1^(13)*(1-a1)^(200-13);
+a2 = 3/100;
+a3 = 10/100;
+h1 = a2^3*(1-a2)^97*a3^10*(1-a3)*90;
+log.lambda = log(h0/h1);
+pchisq ( -2*log.lambda, df=1, lower.tail=F );
+
+@
+
+\end{solution}
+
+\part Argue that the Law of Rare Events (or the Poisson limit theorem, according to Wikipedia) applies in this case, and reformulate your model as a Poisson model.
+\begin{solution}
+Since $n$ is large and $\theta$ is small, Poisson distribution is a reasonable approximation of the binomial distribution. 
+\[X_{ij} \sim P(\theta_{ij})\]
+\end{solution}
+
+\part Spend about a paragraph explaining what conclusions you can draw when $H_0$ is rejected.
+If you can reject $H_0$ because the $p$-value (see Stat 342 notes if you need assistance) is very tiny, what can you really conclude?
+How much closer are you to identifying the cause of this type of cancer?
+Think both biologically and statistically.
+\begin{solution}
+
+If we can reject $H_0$, we can say it is very unlikely to observe the data we have observed under $H_0$ and alternatively $H_1$ is true. 
+However, we are still far from knowing the cause of this type of cancer. The statistical concern is that we have not yet measured the variability between cells.  It is plausible that we could identify just as many DE genes by comparing two type A cells because of natural variation between cells.  Thus, the DE genes supported by the test may not only be a consequence of the cancer, but may have nothing to do with cancer at all. Even if we assume the model is true and we identify the real DE genes, i.e., we know which transcripts were differentially transcribed but it still might be the outcome of the cancer instead of the reason.
+\end{solution}
+
+\end{parts}
+
+\question
+In the next question you will analyze a small example of Hi-C-like data.
+This question reviews the Sinkhorn-Knopp and related algorithms.
+
+To account for the bias caused by the propensity for some beads to be more easily detected than others,
+you learned the Sinkhorn-Knopp (SK) algorithm can transform symmetric $\bC$ to doubly stochastic $\bT$, where $\bC = \bB\bT\bB$ for some diagonal matrix $\bB = \mbox{diag}(b_1,\ldots,b_n)$ containing the bead biases $b_i$.
+The SK algorithm prescribes alternating between dividing each row entry by the corresponding row sum and dividing each column entry by the corresponding column sum.
+\begin{parts}
+\part
+Let $\bx_0 = \bone$, then show that if $\by_1 = \left[\bC\bx_0\right]^{-1}$ (take the multiplicative inverse of each element in the vector $\bC \bx_0$ to get $\by_1$), the matrix after one iteration of Sinkhorn-Knopp is
+\[
+	\bC^{(1)} = \mbox{diag}(\by_1) \bC \mbox{diag}(\bx_1),
+\]
+where $\bx_1 = \left[\bC'\by_1\right]^{-1}$.
+\begin{solution}
+\begin{align}
+\bC^{(0.5)} &=  \left[\bC\bx_0\right]^{-1}\bC = \mbox{diag}(\by_1)\bC\\
+\bC^{(1)} &=  \bC^{(0.5)}\mbox{diag}(\left[(\bx_0'\bC^{0.5})'\right]^{-1}) \\
+          &= \mbox{diag}(\by_1)\bC\mbox{diag}(\left[(\bx_0'\mbox{diag}(\by_1)\bC)'\right]^{-1}) \\
+          &= \mbox{diag}(\by_1)\bC\mbox{diag}(\left[(\by_1'\bC)'\right]^{-1}) \\
+          &= \mbox{diag}(\by_1)\bC\mbox{diag}(\left[\bC'\by_1\right]^{-1})
+\end{align}
+\end{solution}
+\part
+One can use induction to show (I'm not asking it) that, in general,
+\[
+	\bC^{(k+1)} = \mbox{diag}(\by_{k+1}) \bC \mbox{diag}(\bx_{k+1}) % = \mbox{diag}(\by_{k+1})\cdots\mbox{diag}(\by_0)\bC \mbox{diag}(\bx_0) \cdots \mbox{diag}(\bx_{k+1}).
+\]
+where
+\begin{eqnarray}
+\by_{k+1}	&=& \left[\bC\bx_{k}\right]^{-1} \label{eqn:sk_iteration_y} \\
+\bx_{k+1}	&=& \left[\bC'\by_{k+1}\right]^{-1} = \left\{\bC'\left[\bC \bx_{k}\right]^{-1}\right\}^{-1}.\label{eqn:sk_iteration_x}
+\end{eqnarray}
+{\color{red}Let me spend a bit more time showing this, so you can put it to use.
+At iteration $k$, we have $\mbox{diag}(\by_k)\bC\mbox{diag}(\bx_k)$ with column sums $\bone$.
+We seek a new matrix $\mbox{diag}(\by_{k+1})$ such that row sums, $\mbox{diag}(\by_{k+1})\bC\mbox{diag}(\bx_k)\bone = \bone$, are one,
+but this equation is solved as $[\mbox{diag}(\by_{k+1})]^{-1} = \bC\bx_k$, which yields Eq.~\ref{eqn:sk_iteration_y}.
+Eq.~\ref{eqn:sk_iteration_x} is found similarly.
+}
+Thus, the Sinkhorn-Knopp algorithm defines a sequence of vectors $\bx_0,\bx_1,\ldots$ that converge because the $\bC^{(k)}$ converge and yields
+\[
+	\bT \approx \mbox{diag}(\by_K)\bC\mbox{diag}(\bx_K)
+\]
+for sufficiently large $K$.
+Furthermore, $y_{Kl} = x_{Kl}$ is approximately the inverse bias $\frac{1}{b_l}$ when $\bC$ is symmetric.
+
+Imakaev2012 propose an algorithm that is very similar to the Sinkhorn-Knopp algorithm.
+\begin{enumerate}
+\item Let $n$ be the number of beads and initialize $k=0$ and $\bC^{(k)}=\bC$.
+\item \label{itm:imakaev_iteration} At iteration $k$, compute the row sums $c_{i\cdot}^{(k)} = \sum_j c_{ij}^{(k)}$ and mean row sum $\overline c^{(k)} = \frac{1}{n}\sum_i c_{i\cdot}^{(k)}$. 
+Update $c_{ij}^{(k+1)} = \frac{c_{ij}^{(k)}\left(\overline c^{(k)}\right)^2}{c_{i\cdot}^{(k)}c_{\cdot j}^{(k)}}$.
+\item Increment $k$ and repeat step \ref{itm:imakaev_iteration} until $\bC^{(k)}$ barely changes any more.
+\end{enumerate}
+Using the fact that SK converges, prove that this algorithm converges to a constant multiple of a doubly stochastic matrix, $C\bT$, where $C$ is some constant.
+
+\textbf{Hint.}  Write the algorithm as two iterated functions, $f_x(\cdot)$ and $f_y(\cdot)$, as was done above for SK in Eqs.~\ref{eqn:sk_iteration_y}--\ref{eqn:sk_iteration_x}.
+The iteration is initialized with $\bx_0=\by_0 = \bone$.
+Show that although the sequences $\{\bx_0,\bx_2=f_x(\bx_0),\bx_4=f_x(\bx_2),\ldots\}$ and $\{\by_0,\by_2=f_y(\by_0),\by_4=f_y(\by_2),\ldots\}$ obtained from iterating the functions do not converge, their product $\bx_{2i+2}\by_{2i+2}=f_x(\bx_{2i})f_y(\by_{2i})$ does, and so the Imakaev2012 algorithm does too.
+
+% \begin{solution}
+% Let's say we start from matrix $C^0$
+% From Sinkhorn algorithm we have the following iterative relationship. 
+% We have already prove when k=0 
+% \begin{align*}
+%     y_1 &= \left[C^0x_0\right]^{-1} \\
+%     x_1 &= \left[(C^0)^{'}\left[C^0x_0\right]^{-1}\right]^{-1}
+% \end{align*}
+% 
+% For $k=i+1$ we have, 
+% \begin{align*}
+%     y_{i+1} &= \left[C^{i+1}x_0\right]^{-1} \\
+%     x_{i+1} &= \left[(C^{i+1})^{'}\left[C^{i+1}x_0\right]^{-1}\right]^{-1}
+% \end{align*}
+% 
+% Note the definition of $y_i$ and $x_i$ are different from those in the question. However Sinkhorn actually proved that there is a sequence of $C^0$, $C^1$,...,$C^n$ which converges to a double stochastic matrix $T$ and at each iteration the following is satisfied: 
+% \[C^{i+1} = \mbox{diag}(y_i)C^{i}\mbox{diag}(x_i).\]
+% 
+% We can think in the case of k=2, we actually have
+% \begin{align*}
+% C^{2} &= \mbox{diag}(y_2)C^1\mbox{diag}(x_2) \\
+% C^{2} &= \mbox{diag}(y_2)\mbox{diag}(y_1)C^0\mbox{diag}(x_1)\mbox{diag}(x_2)
+% \end{align*}
+% 
+% Thus you can use induction to prove in the general case,
+% \[C^{i+1} = \left[\prod_{j=1}^{j=i+1}\mbox{diag}(y_{j})\right] C^0 \left[\prod_{j=1}^{j=i+1}\mbox{diag}(x_{j})\right]\]
+% 
+% \end{solution}
+
+\part Implement the SK algorithm and demonstrate it works on
+\[
+	\left(\begin{array}{ccc}
+		3	& 4	& 5 \\
+		18	& 5	& 7 \\
+		8	& 15	& 9
+	\end{array}\right).
+\]
+Report the doubly stochastic matrix $\bT$ and left biases $b_{l1},b_{l2},b_{l3}$ and right biases $b_{r1},b_{r2},b_{r3}$.
+Biases for non-symmetric matrices are analogous to biases for symmetric matrices, except a row $i$ may be particularly detectable as a donor, but not as an accepter, when the relationships sampled in the matrix have the concept of donor and acceptor.
+
+\begin{solution}
+<<>>==
+sinkhorn.knopp.iteration <- function(M) {
+  n = dim(M)[1];
+  iter = 1;
+  x = rep(1, n);
+  repeat {
+    y = 1/M%*%x;
+    x.new = 1/t(M)%*%y;
+    if (norm(x.new - x)<1e-6) break;
+    iter = iter + 1;
+    x = x.new;
+  }
+  list(D1=as.vector(y), D2=as.vector(x), iter=iter)
+}
+
+M = matrix(c(3,4,5,18,5,7,8,15,9), nrow=3, byrow=T);
+result=sinkhorn.knopp.iteration(M);
+diag(result$D1)
+diag(result$D2)
+@
+\end{solution}
+
+
+\end{parts}
+
+
+\question
+Your goal is to figure out the pattern of beads in 2D space when all you observe is the noisy number of times each pair of beads is seen to interact in $N$ total observed interactions.
+
+Collect the data from Blackboard.
+These data are counts $c_{ij}$ of the number of times bead $i$ was found to interact with bead $j$.
+The data are the lower triangular form of a symmetric matrix given in column order; the diagonals are assumed zero.
+Unlike the Hi-C data, where the beads are ordered by their position along the genome, these data are not naturally ordered, except spatially, but you will not know the spatial relationships until you estimate them.
+As a consequence, there are no natural neighbors and hence all beads can potentially interact with each other, unlike in Hi-C data, where interactions between neighboring beads along the genome were dropped from the data.
+
+\begin{parts}
+\part Report your estimate of $\bT$.
+Which $10$ beads have the biggest bias and are least detectable?
+\begin{solution}
+<<>>==
+setwd("/home/ruolin/Dropbox/2016BCB568/homework")
+beads= scan("counts.Rtxt")
+C = diag(400)
+C[lower.tri(C, diag=F)] = beads
+diag(C) = 0
+C = t(C) + C
+
+Imakaev.iteration <- function(M) {
+  iter = 1;
+  B.aggregate = rep(1, dim(M)[1]);
+  
+  repeat {
+    k = mean(rowSums(M));
+    delta_B  = rowSums(M)/sqrt(k); 
+    ## NOTE here is the square root of k
+    ## Imakaev does not take the squre root but I did. If we 
+    ## donot take square root, T is not double stochastic matirx. 
+    
+    B.aggregate = B.aggregate * delta_B;
+    M.new = diag(as.vector(1/delta_B))  %*% M %*% 
+          diag(as.vector(1/delta_B));
+
+    if(var(delta_B) < 1e-10) break;
+    iter = iter + 1;
+    M = M.new;
+  }
+  list(B=B.aggregate, iter=iter);
+}
+
+result = Imakaev.iteration(C)
+
+T= diag(1/result$B)%*%C%*%diag(1/result$B)
+## T is a double stochastic matirx but too large to print
+## The bias is very large in the order of 1e3.
+plot(result$B)
+### The 10 beads with largest bias
+order(result$B, decreasing=TRUE)[1:10]
+@
+\end{solution}
+
+\part
+Now attempt denoising the data by using the eigenvector expansion for the top $K$ eigenvalues.
+(Please note, I believe Imakaev is wrong to add back in the mean--it is not clear what mean is meant: use the equation for $\bZ$ in the PCA notes.
+Also note that $\bT$ is not necessarily a positive semi-definite matrix, so some eigenvalues may be negative.)
+There is plenty of noise in these data, so many small eigenvalues represent noise signal.
+Hopefully the true signal resides in the first few eigenvalues.
+Plot the eigenvalues in decreasing order, and see if you can identify a good choice for $K$ such that larger eigenvalues carry signal and smaller eigenvalues probably carry noise.
+
+\begin{solution}
+<<>>==
+T.decom = eigen(T)
+plot(T.decom$values)
+## It looks like K=3 might be a good choice since 
+## the largest three eigen values stand out. 
+@
+\end{solution}
+
+\part
+Implement metric MDS with Euclidean distances minimizing the sum of squared differences to estimate $\bX$, the locations of the beads in 2D.
+In \R, the function \Rcode{cmdscale()} does the job.
+Plot your results for $K=3$.
+\begin{solution}
+<<>>==
+k=3
+T.noised_removed= T.decom$vectors[,1:k] %*% 
+  diag(T.decom$values[1:k]) %*% t(T.decom$vectors[,1:k])
+
+beads_locations = cmdscale(T.noised_removed, k=2)
+
+plot(beads_locations[,1], beads_locations[,2])
+## MDS location of beads in 2D. I can't make sense of the labels 
+##on x-axis and y-axis 
+@
+\end{solution}
+
+\part What is the effect of $K$ on your results?
+Can you guess the true arrangement of the beads?
+\begin{solution}
+<<>>==
+k=2
+T.noised_removed= T.decom$vectors[,1:k] %*% 
+  diag(T.decom$values[1:k]) %*% t(T.decom$vectors[,1:k])
+
+beads_locations = cmdscale(T.noised_removed, k=2)
+
+plot(beads_locations[,1], beads_locations[,2])
+## MDS location of beads in 2D when K=2
+
+k=10
+T.noised_removed= T.decom$vectors[,1:k] %*% 
+  diag(T.decom$values[1:k]) %*% t(T.decom$vectors[,1:k])
+
+beads_locations = cmdscale(T.noised_removed, k=2)
+
+plot(beads_locations[,1], beads_locations[,2])
+## MDS location of beads in 2D when K=10
+
+@
+\end{solution}
+
+
+\part
+What determines the error in the placement of beads?
+\end{parts}
+
+\question
+Consider the following data relating the genotype at a SNP locus of $n=2000$ individuals with their disease phenotype.
+Perform a test to determine if there is association of the phenotype with the locus.
+Justify your test.  Draw a conclusion.
+<<, echo=F, cache=T>>=
+q <- 0.7
+beta <- 0.1
+n <- 1000
+n.1 <- rmultinom(1, size=n, prob=c(q^2, 2*q*(1-q), (1-q)^2))
+n.2 <- rmultinom(1, size=n, prob=c(q^2, 2*q*(1-q), (1-q)^2))
+a.1 <- rbinom(3, size=n.1, prob=0.01+beta*(0:2))
+a.2 <- rbinom(3, size=n.2, prob=0.3-beta*(0:2))
+pop.1 <- matrix(c(a.1, n.1-a.1), nrow=2, byrow=T)
+pop.2 <- matrix(c(a.2, n.2-a.2), nrow=2, byrow=T)
+@
+\begin{center}
+\begin{tabular}{cccccc}
+        &               & \multicolumn{3}{c}{\bf Genotype} \\
+        &               & $AA$  & $AB$  & $BB$  & Total \\
+\hline
+\multirow{2}{*}{\bf Disease}
+        & control       & $\Sexpr{(pop.1+pop.2)[1,1]}$      & $\Sexpr{(pop.1+pop.2)[1,2]}$      & $\Sexpr{(pop.1+pop.2)[1,3]}$      & $\Sexpr{rowSums((pop.1+pop.2))[1]}$ \\
+        & case          & $\Sexpr{(pop.1+pop.2)[2,1]}$      & $\Sexpr{(pop.1+pop.2)[2,2]}$      & $\Sexpr{(pop.1+pop.2)[2,3]}$      & $\Sexpr{rowSums((pop.1+pop.2))[2]}$ \\
+\hline
+        & total         & $\Sexpr{colSums((pop.1+pop.2))[1]}$       & $\Sexpr{colSums((pop.1+pop.2))[2]}$       & $\Sexpr{colSums((pop.1+pop.2))[3]}$       & $\Sexpr{sum((pop.1+pop.2))}$
+\end{tabular}
+\end{center}
+
+\question
+\label{qst:chi-square}
+In this question we will analyze a more realistic (in size) genomic dataset.
+We will still avoid real data because real data have a pesky problem of missing data.
+Please find the data on the website, one file of genomic data and another of the (disease) phenotype.
+
+\begin{parts}
+\part Perform an Cochran-Armitage test on the sixth locus using aggregated data as in question~\ref{qst:chi-square}.  Why does it produce a more significant $p$-value than a chi-square test of the same data?
+(\textbf{Note:} In one version of the posted notes, I included some old notes that use \R\ function \Rcode{independence\_test()} presumably to perform Cochran-Armitage, but I no longer recall the precise connection between Cochran-Armitage and this function in \R.  Instead, use the derivations in the notes.  The derivations force you to remember the model and assumptions, which you need to be aware of whenever applying a test to data.)
+
+\begin{solution}
+<<>>==
+library(plyr)
+gwas= read.table("gwas.Rtxt")
+phenotype = scan("y.Rtxt")
+
+dat = rbind(phenotype, gwas)
+#dim(dat)
+#unlist(dat[7, dat[1,] == 0])
+ negative = table(unlist(dat[7, dat[1,] == 0]))
+ positive = table(unlist(dat[7, dat[1,] == 1]))
+ locus6 = rbind(negative, positive)
+ 
+armitage_test = function(m){
+  ## M is 2x3 matrix, first row is control ,second is case
+  X= matrix(c(1,1,1,0,1,2), ncol=2, byrow=F)
+  p = m[2,]/colSums(m)
+  
+  alpha_0_hat = rowSums(m)[2]/sum(m)
+  sigma = alpha_0_hat * (1- alpha_0_hat) / colSums(m)
+  W_0 = diag(sqrt(1/sigma))
+  
+  X_0 = W_0 %*%X
+  p_0 = W_0 %*%p
+  
+  beta = solve(t(X_0)%*%X_0)%*%t(X_0)%*%p_0
+  var = solve(t(X_0)%*%X_0)
+  list(beta=beta, var=var)
+}
+result = armitage_test(locus6)
+test_T = result$beta[2]/sqrt(result$var[2,2])
+test_T
+2*pnorm(test_T)
+@
+\end{solution}
+
+\part 
+To account for possible confounding population structure we cannot use the aggregated data, so
+return to the original data, where each entry $x_{ji}$ is the number of major alleles at locus $j$ observed in a sample of size $2$ from the $i$th diploid individual.
+Compute the (global--across subpopulations, if they exist) wild-type allele frequency for each locus.
+Pre-process the data by subtracting the row means and standardizing so each entry $x_{ij}$ has population variance approximately $1$.
+(\textbf{Hint:} You may run into some computational difficulties working with such large matrices; be assured there are ways that do not make you wait overnight or more for calculations to finish.)
+(\textbf{Note:} Actually, Price2006 neglects a factor of $2$, the number of alleles sampled within each diploid individual, when standardizing the genotypes, but since it is a constant, it does not interfere with the analysis.)
+Point out two reasons this standardization is only an approximation.
+What could be the consequences of a failure to actually standardize?
+
+\part Perform a PC analysis on the standardized $\bX$ matrix.  Do you find evidence of genetic subpopulations in these data?  How many do you think?
+
+\part Regress $\by$, the disease indicator, on the top $3$ eigenvectors  $\bG^{(3)}$ \textit{and} the sixth locus.  Do your conclusions about the association of locus $6$ with the disease change?  Interpret.
+
+\part The above regression can be written as
+\[
+	\by = \left(\bG^{(3)}, \bx\right) \bbeta + \bepsilon,
+\]
+where $n\times1$ vector $\bx$ is the standardized data at the sixth locus.
+The least squares estimators (and MLEs when $\bepsilon \sim N(0, \sigma^2)$)  of the coefficients are, from the usual matrix formula applied to this special case,
+\[
+	\hat\bbeta = \left(\begin{array}{cc}
+			\bI		& (\bG^{(3)})'\bx \\
+			\bx'\bG^{(3)}	& \bx'\bx
+		\end{array}\right)^{-1}\left(\begin{array}{c}
+			(\bG^{(3)})' \\
+			\bx'
+		\end{array}\right)\by.
+\]
+The $4\times4$ matrix $\bM = \left(\begin{array}{cc}
+                        \bI		& (\bG^{(3)})'\bx \\
+                        \bx'\bG^{(3)}   & \bx'\bx
+                \end{array}\right)$ is simple enough to invert analytically (you might find a formula in a book, or you can take the inverse as the product of elementary matrices that convert $\bM$ to $\bI$, \textit{i.e.}~if $\bE_1,\bE_2,\ldots,\bE_L$ are such that $\bE_L\bE_{L-1}\cdots\bE_2\bE_1\bM = \bI$, then $\bM^{-1} = \bE_L\bE_{L-1}\cdots\bE_2\bE_1$).
+Verify that
+\[
+	\bM^{-1} = \left(\begin{array}{cccc}
+			1 + \bg_{(1)}'\bx\bx'\bg_{(1)}	& \bg_{(1)}'\bx\bx'\bg_{(2)}	& \bg_{(1)}'\bx\bx'\bg_{(3)}	& -\bg_{(1)}'\bx/D \\
+			\bg_{(2)}'\bx\bx'\bg_{(1)}	& 1+ \bg_{(2)}'\bx\bx'\bg_{(2)}	& \bg_{(2)}'\bx\bx'\bg_{(3)}	& -\bg_{(2)}'\bx/D \\
+			\bg_{(3)}'\bx\bx'\bg_{(1)}	& \bg_{(3)}'\bx\bx'\bg_{(2)}	& 1+\bg_{(3)}'\bx\bx'\bg_{(3)}	& -\bg_{(2)}'\bx/D \\
+			-\bx'\bg_{(1)}/D		& -\bx'\bg_{(2)}/D		& -\bx\bg_{(3)}/D		& 1/D
+		\end{array}\right),
+\]
+where $D = \bx'[\bI - \bG^{(3)}(\bG^{(3)})']\bx$.
+Therefore, the least squares estimate of the coefficient of $\bx$ is
+\[
+	\hat\beta_4 = \frac{\bx'[\bI - \bG^{(3)}(\bG^{(3)})']\by}{\bx'[\bI - \bG^{(3)}(\bG^{(3)})']\bx}.
+\]
+Show that this is exactly the estimate of the coefficient you get if you regress the residuals $\bepsilon_{y3}$ on residuals $\bepsilon_{x3}$ after setting $\bepsilon_{x0} = \bx$ and $\bepsilon_{y0} = \by$ and repeatedly performing simply linear regressions:
+\begin{eqnarray*}
+	\bepsilon_{x,l-1} = \beta_{x,l}\bg_{(l)} + \bepsilon_{xl} \\
+	\bepsilon_{y,l-1} = \beta_{y,l}\bg_{(l)} + \bepsilon_{yl}
+\end{eqnarray*}
+for $l=1,2,3$ as recommended in Price2006 to remove the confounding factor of population structure.
+\end{parts}
+
+\end{questions}
+
+\end{document}
