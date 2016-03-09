@@ -1,0 +1,156 @@
+\documentclass[12pt]{article}
+\usepackage[]{graphicx}
+\usepackage[]{color}
+\usepackage{float, amssymb, amsmath, comment}
+
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage{hyperref}
+
+
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\realR}{\mathbb{R}}
+\newcommand{\natN}{\mathbb{N}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newtheorem{myalg}{Algorithm}
+\title{EM application on ambiguous read assignments for RNA-seq }
+\author{Ruolin Liu}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+
+\begin{document}
+\maketitle
+
+\section{Problem}
+Given a set of known transcripts $F = \{f_t|t\in[1, k] \cap \natN \}$ and a set of aligned single-end RNA-seq reads $R = \{r_i|i\in [1,n]  \cap \natN \}$ with totally $n$ reads, what is the number of copies of transcripts in the form of $f_t$ in the sample?
+
+\section{Assumptions}
+\begin{itemize}
+\item Each transcript is independently processed.
+\item Each read is independently generated.
+\item The read count for each transcript is proportional to its expression.  
+\end{itemize} 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{./read-assignments}
+\caption{An example of 3 transcripts with 7 aligned reads. Read c and f share the same 5' end but clearly belong to different transcripts.}
+\label{fig:read-assignments}
+\end{figure}
+
+\section{A general model for RNA-seq}
+If all reads map to transcripts uniquely, a simple solution would be just counting the number of reads for each transcript. However, transcripts tend to overlap with each other a lot. We often observe a great number of reads mapping to more than one transcript. Thus, the ultimate question can be seen as which transcript actually generate the observed reads. Usually, we assume RNA-seq reads are uniquely mapped to genome. Therefore, we can partition the reads by the loci they are mapped to and treat each locus independently. From now on, the discussion is restricted to a single locus.
+
+\begin{comment}
+Let $y_i$ indicates the number of $i$\textit{th} read. Here $i$ does not range over 1 to $n$ but rather indexes the aligned genomic positions of both end of the read. Due to the fact that some reads are spliced aligned, either 5' end or 3'end by itself is not sufficient to pinpoint the set of compatible transcripts for some reads (Fig. 1). Based on this definition of index $i$, our observed data is a vector of counts $y = \left[y_1,..,y_i,...,y_m \right], y_i \in \natN$ and $\sum_{i}y_i=n$. $m$ is the total number of unique positions reads can be aligned to. 
+\end{comment}
+
+Let $t$ index the transcripts. $\theta_t$ is the relative abundance of transcript $t$ with effective length  $l_t$. Note that $\sum_{t=1}^{k}\theta_t=1$. The probability of observing a read at a particular place $j$, compatible with a set of transcripts $F_j$ (this set depends on place $j$, see Fig. 1) is 
+\begin{equation}
+P(r_i, F_j) = \sum_{t=1}^{k}I(f_t \in F_j)P(f_t)P(r_i|f_t)
+\end{equation}
+
+According to our parameterization, $P(f_t) = \theta_t$. Also let us assume that each read is generated from each transcript uniformly and thereby we have $P(r_i|f_t) = \frac{1}{l_t}$. The observed likelihood would be 
+\begin{align}
+L_{obs}(\theta|r_1,...,r_n, F) &= \prod_{i=1}^{n}P(r_i,F_j) \\
+						  &= \prod_{i=1}^{n} (\sum_{t=1}^{k}I(f_t \in F_j)\frac{\theta_t}{l_t})
+\end{align}
+
+ Ideally we can directly optimize against $L_{obs}$ to find MLE. However, it is not trivial to do so not because of the indicator function but rather because the existence of the sum term. (We can get rid of the indicator function by letting $P(r_i|f_t)$ depend on $i$, i.e., $P(r_i|f_t) = \frac{1}{l_{it}}$ and then setting $l_{it} = \infty$ for non-compatible transcripts)
+
+
+Instead, EM algorithm kicks in perfectly to solve this problem. Let $z_i$ be a latent indicator variable, indicating the true transcript source of the i\textit{th} read (hidden data). Now we can work out the complete data likelihood.
+\begin{equation}
+L_c(\theta|r_1,...,r_n, z_1,...,z_n, F) = \prod_{i=1}^{n}\prod_{t=1}^{k} (\frac{\theta_t}{l_t})^{I(z_i=t)}
+\end{equation}
+
+And the log likelihood function.
+\begin{equation}
+\log L_c = \sum_{i=1}^{n}\sum_{t=1}^{k} \left[I(Z_i = t)((\log(\theta_t) + \log(\frac{1}{l_t}))\right] 
+\end{equation}
+
+Since the term $\log(\frac{1}{l_t})$ does not depend on $\theta$ we can drop it. The expected complete log likelihood w.r.t latent variable $z_i$ conditional on the observed data $r_i$ and $F$ and initial or previous guess of parameter $\theta^*$, denoted by $Q(\theta | \theta^*)$ is
+\begin{align}
+Q(\theta | \theta^*) &= \E_{Z|R,F,\theta^*}\left[\log L_c\right] \\
+                     &= \sum_{i=1}^{n}\sum_{t=1}^{k} \E\left[I(Z_i = t)\right]\log(\theta_t) \\
+                     &= \sum_{i=1}^{n}\sum_{t=1}^{k} P(Z_i=t|r_i,F_j,\theta^*)\log(\theta_t) \\
+                     &= \sum_{i=1}^{n}\sum_{t=1}^{k} \alpha_{it}\log(\theta_t)
+\end{align}
+
+Where $\alpha_{it} = \frac{\frac{\theta_t^*}{l_t}}{\sum_{t}\frac{\theta_t^*}{l_t}}$, which is a constant.
+
+Next, in the M-step, a new estimation of $\theta$ is obtained by maximizing  $Q(\theta | \theta^*)$. However, this function is unbounded if $\theta_t \in \realR$. Luckily we have a constraint that $\sum_{t}\theta_t = 1$. We are going to put this constraint into the maximizing function using a Lagrangian multiplier $\lambda$ and $\lambda$ is also a parameter which is needed to be estimated. 
+\begin{equation}
+\max_{\theta}\left[ \sum_{i=1}^{n}\sum_{t=1}^{k} \alpha_{it}\log(\theta_t) + \lambda(1-\sum_{t}\theta_t) \right]
+\end{equation}
+
+Taking partial derivative against $\theta_t$ and set it to 0 yield 
+
+\begin{equation}
+\theta_t = \frac{\sum_{i=1}^{n}\alpha_{it}}{\lambda} 
+\end{equation}
+
+And summing over all $t$ we can solve for $\lambda$
+\begin{align}
+\frac{\sum_{t=1}^{k}\sum_{i=1}^{n}\alpha_{it}}{\lambda} & =1 \\
+\Rightarrow \frac{\sum_{i=1}^{n} \sum_{t=1}^{k} \alpha_{it}}{\lambda} & =1 \\
+\Rightarrow n & = \lambda
+\end{align}
+
+Finally we are ready to summarize the EM algorithm for the ambiguous RNA-seq read assignment problem. 
+
+\begin{equation}
+\mbox{E-step:    } \alpha_{it} = \frac{\frac{\theta_t^*}{l_t}}{\sum_{t}\frac{\theta_t^*}{l_t}} 
+\end{equation}
+\begin{equation}
+\mbox{M-step:    } \theta_t = \frac{\sum_{i=1}^{n}\alpha_{it}}{n} 
+\end{equation}
+
+\end{document}
