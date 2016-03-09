@@ -88,9 +88,6 @@ Given a set of known transcripts $F = \{f_t|t\in[1, k] \cap \natN \}$ and a set 
 \section{A general model for RNA-seq}
 If all reads map to transcripts uniquely, a simple solution would be just counting the number of reads for each transcript. However, transcripts tend to overlap with each other a lot. We often observe a great number of reads mapping to more than one transcript. Thus, the ultimate question can be seen as which transcript actually generate the observed reads. Usually, we assume RNA-seq reads are uniquely mapped to genome. Therefore, we can partition the reads by the loci they are mapped to and treat each locus independently. From now on, the discussion is restricted to a single locus.
 
-\begin{comment}
-Let $y_i$ indicates the number of $i$\textit{th} read. Here $i$ does not range over 1 to $n$ but rather indexes the aligned genomic positions of both end of the read. Due to the fact that some reads are spliced aligned, either 5' end or 3'end by itself is not sufficient to pinpoint the set of compatible transcripts for some reads (Fig. 1). Based on this definition of index $i$, our observed data is a vector of counts $y = \left[y_1,..,y_i,...,y_m \right], y_i \in \natN$ and $\sum_{i}y_i=n$. $m$ is the total number of unique positions reads can be aligned to. 
-\end{comment}
 
 Let $t$ index the transcripts. $\theta_t$ is the relative abundance of transcript $t$ with effective length  $l_t$. Note that $\sum_{t=1}^{k}\theta_t=1$. The probability of observing a read at a particular place $j$, compatible with a set of transcripts $F_j$ (this set depends on place $j$, see Fig. 1) is 
 \begin{equation}
