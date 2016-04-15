@@ -1,0 +1,472 @@
+\documentclass[12pt,addpoints]{exam}
+% uncomment for exam with solutions
+\printanswers
+%\pointsinmargin
+%\marginpointname{ pts}
+\bracketedpoints
+%\pagestyle{empty}
+%\qformat{Question \thequestion\dotfill \emph{\totalpoints\ points}}
+
+
+
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{comment}
+\usepackage{amsthm}
+\usepackage{color}
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+
+\DeclareMathOperator*{\E}{\mathbb{E}}
+
+\newcommand{\bA}{\ensuremath{\boldsymbol{A}}}
+\newcommand{\bB}{\ensuremath{\boldsymbol{B}}}
+\newcommand{\bC}{\ensuremath{\boldsymbol{C}}}
+\newcommand{\bD}{\ensuremath{\boldsymbol{D}}}
+\newcommand{\bE}{\ensuremath{\boldsymbol{E}}}
+\newcommand{\bg}{\ensuremath{\boldsymbol{g}}}
+\newcommand{\bG}{\ensuremath{\boldsymbol{G}}}
+\newcommand{\bI}{\ensuremath{\boldsymbol{I}}}
+\newcommand{\bM}{\ensuremath{\boldsymbol{M}}}
+\newcommand{\bT}{\ensuremath{\boldsymbol{T}}}
+\newcommand{\bX}{\ensuremath{\boldsymbol{X}}}
+\newcommand{\bx}{\ensuremath{\boldsymbol{x}}}
+\newcommand{\by}{\ensuremath{\boldsymbol{y}}}
+\newcommand{\bZ}{\ensuremath{\boldsymbol{Z}}}
+\newcommand{\bbeta}{\ensuremath{\boldsymbol{\beta}}}
+\newcommand{\bepsilon}{\ensuremath{\boldsymbol{\epsilon}}}
+\newcommand{\bone}{\ensuremath{\boldsymbol{1}}}
+\newcommand{\R}{\texttt{R}}
+\newcommand{\Rcode}[1]{\texttt{#1}}
+
+\begin{document}
+<<include=FALSE>>= 
+knit_hooks$set(document=function(x){ 
+  sub('\\usepackage{framed}', '', x, fixed=TRUE) 
+}) 
+@
+
+
+\begin{center}
+\section*{Homework 3}
+\end{center}
+
+\noindent \textbf{Rules:}  You may work together.  You may share code.  You \textit{must} write up independent solutions with your own conclusions and analysis to turn in.
+Please also insure that one copy of each piece of code used to get answers is provided to the instructor.
+
+\begin{questions}
+
+\question\label{qst1} 
+The model Ruolin taught you took the alignments as given and unambiguous, but multi-mapped reads, reads that align to multiple possible locations on the genome, are not uncommon.
+In particular, there can be difficulties attributing reads in gene families, where several similar paralogs exist in the same species genome.
+
+\begin{parts}
+\part\label{qst1:prt1}
+Suppose you know that a read is the (complete) sequence of one of seven possible genes in a gene family, but you do not know which one.
+Propose a model that selects a gene at random, in proportion to its unknown relative abundance in the sampled cell population, and generates a complete sequence from the selected gene, with iid sequencing errors occurring with an unknown error probability.
+Carefully define all your notation and write down the (observed data) log likelihood.
+
+\begin{solution}
+ Let $R = \{r_j, j \in 1,...n\}$ denote the observed reads, and $G_i, i\in \left[ 1,2,...,7\right] $ for the 7 possible genes. The unknown parameters for the relative abundances of $G_i$ is $\theta_i$ and, $p_e$ the error probability. The probability of selecting a gene, e.g., $G_i$ is just $\theta_i$. Given a gene $G_i$ and its sequence $S_i$ ($G_i$ and $S_i$ are interchangeable), the event of observing read $r$, which is sequenced from $S_i$ is a set of i.i.d. Bernouli experiments on individual position with the probability of non-matching is $p_e$. Thus, if the length in nucleotide of gene $G_i$ is $n_i$, a known quantity, and the number of mismatches is $m_i$, which is also known. Then we can write the conditional probability of generating the full gene-length read $r$ conditioning on its parent gene being $G_i$, as 
+  \[P(r_j|S_i) = p_e^{m_{ij}}(1-p_e)^{n_i-m_{ij}}\]
+The observed likelihood is 
+\begin{align}
+P(R) &= \prod_{j=1}^{n}\sum_{i=1}^{7}P(r_j|S_i)P(S_i) \\
+     &= \prod_{j=1}^{n}\sum_{i=1}^{7}\theta_i p_e^{m_{ij}}(1-p_e)^{n_i-m_{ij}}
+\end{align}
+The unknown parameters are $\theta_i, i\in \left[ 1,2,...,7\right] $ and $p_e$
+\end{solution}
+
+
+\part\label{qst1:prt2}
+Derive an EM algorithm for the model in part~\ref{qst1:prt1}.
+Carefully define the missing data and specify the complete data log likelihood.
+How do you compute the expected complete data log likelihood in the E step?
+What is the update equation in the M step?
+
+\begin{solution}
+Now we need to introduce the hidden variables $Z_j$ to indicate the true parent transcript for read $r_j$. Consider a set of $n$ read.
+The complete likelihood function
+\begin{align}
+  \mathcal{L}_c &= \prod_{j=1}^{n}\prod_{i=1}^{7} \left[ P(r_j|S_i)P(S_i)\right]^{I(Z_j = G_i)} \\
+  \log(\mathcal{L}_c) &= \sum_{j=1}^{n}\sum_{i=1}^{7} I(Z_j = G_i) ( \log(P(r_j | S_i)) + \log(P(S_i)) \\
+  Q(\Theta, p_e| \Theta^*, p_e^*) &= \sum_{j=1}^{n}\sum_{i=1}^{7} P(Z_j = G_i|r_j,\Theta^*, p_e^*)\left[log(\theta_i) + m_{ij}\log(p_e) + (n_i-m_{ij})log(1-p_e)\right]
+\end{align}
+
+Where $\Theta^*, p_e^*$ stand for the intial estimations or previous estimations. Equation 5 indicates that $\Theta$ and $p_e$ are separable. Let's first derive the EM algorithm for $\Theta$. For simplicity, we write $P(Z_j = G_i |r_j)$ instead of $P(Z_j = G_i|r_j,\Theta^*, p_e^*)$.
+\begin{align}
+Q(\Theta | \Theta^*, p_e^*) = \sum_{j=1}^{n}\sum_{i=1}^{7} P(Z_j = G_i |r_j)\log(\theta_i) + \lambda(1-\sum_{i}\theta_i) 
+\end{align}
+The $\lambda$ is the Lagrangian multiplier. The KKT conditions yield 
+\begin{align}
+  \lambda &= n \\
+  \theta_i &= \frac{\sum_{j=1}^{n}P(Z_j = G_i |r_j)}{n}
+\end{align}
+
+Equation 5 indicates that we can drop the $\theta_i$ term when maximizing over $p_e$. Taking derivative with respect to $p_e$ and equating to 0, we got 
+\begin{align}
+  \sum_{j=1}^{n}\sum_{i=1}^{7}P(Z_j = G_i|r_j)\left[ \frac{m_{ij}}{p_e} + \frac{m_{ij} - n_i }{1- p_e}\right] = 0 \\
+  \frac{\sum_{j=1}^{n}\sum_{i=1}^{7}P(Z_j = G_i |r_j)m_{ij}}{p_e} + \frac{\sum_{j=1}^{n}\sum_{i=1}^{7}P(Z_j = G_i |r_j)(m_{ij} - n_i)}{1-p_e} = 0 \\
+  p_e = \frac{\sum_{i,j}P(Z_j = G_i |r_j)m_{ij}}{\sum_{i,j}P(Z_j = G_i |r_j)n_{ij}} 
+\end{align}
+Thus, equation 8 and 11 indicate the update equation in the M-step. 
+
+Now, let's take a look at what is $P(Z_j = G_i |r_j)$.
+According to the Bayes' rule and conditioning on the previous estimates $\Theta_*, p_e$ 
+\begin{align}
+P(Z_j = G_i |r_j) &= \frac{P(r_j|Z_j = G_i, )P(Z_j = G_i)}{P(r_j)} \\
+                       &= \frac{\theta_i^* (p_e^*)^{m_{ij}}(1-p_e^*)^{n_i-m_{ij}}}{ \sum_k\theta_i^* (p_e^*)^{m_{kj}}(1-p_e^*)^{n_i-m_{kj}} }
+\end{align}
+
+\end{solution}
+
+\part\label{qst1:prt3}
+To make the model more realistic, suppose that the reads do not cover the entire gene, but start at an unknown, but random position in the gene.
+Propose a model that assumes 150-bp reads are uniformly distributed (on both strands) over the seven transcripts present in unknown relative abundance.
+Further, assume that reads are generated with (read) position-specific error probabilities that are unknown (to be estimated).
+Carefully define all your notation and write down the (observed data) log likelihood.
+
+\begin{solution}
+Now we will extend the model \ref{qst1:prt1} to accout for the short reads. Assuming all transcripts are larger than 150bp, the number of possible starting postions for a read on transcript $i$ is $n_i - 150 + 1$, if we assume the read are uniformly generated along a given transcript. Let $ s_{j}$ indicate the starting position for read $r_j$.  $P(r_j|S_j = k, G_i)$ means the probability of a possible alignment of read $r_j$, conditioning on starting at position $k$ at the transcript i. 
+\begin{align}
+  P(r_j |G_i) = \sum_{k}P(r_j|s_j = k, G_i)P(s_j = k|G_i)
+\end{align}
+
+Let $t \in \left[1,...,150\right]$ denote the relative position along a read and $p_{et}$ for the error probability at site $t$. Thus
+
+\begin{align}
+  P(r_j|s_j = k, G_i) = \prod_{t=1}^{150} P_{et}^{m_{ijkt}} (1- P_{et}) ^{1- m_{ijkt}} 
+\end{align}
+where $m_{ijkt} = 1$ if mismatch, and 0 otherwise. 
+The observed likelihood is. 
+\begin{align}
+P(R) &= \prod_{j=1}^{n}\sum_{i=1}^{7}P(r_j|G_i)P(G_i) \\
+     &= \prod_{j=1}^{n}\sum_{i=1}^{7}\theta_i \frac{\sum_{k}\prod_{t=1}^{150} P_{et}^{m_{ijkt}} (1- P_{et}) ^{1- m_{ijkt}} }{n_i-150+1}
+\end{align}
+\end{solution}
+
+
+
+\part 
+Derive an EM algorithm to fit the model from part~\ref{qst1:prt3}.
+Carefully define the missing data, the expected complete data log likelihood (E step) and M step updates.
+\begin{solution}
+Let's introduce hidden variable $Y_{ij}$, which indicates the true start position of generating a read $j$ from transcript $i$. Now We can write the complete data likelihood as
+
+\begin{align}
+\mathcal{L}_c = \prod_{j=1}^{n} \prod_{i=1}^{7} \left[ \frac{\theta_i}{n_i-150+1} \prod_{k} \left[ \prod_{t=1}^{150}P_{et}^{m_{ijkt}}(1-P_{et})^{1-m_{ijkt}} \right]^{Y_{ij} = k}  \right]^{I(Z_j = G_i)} 
+\end{align}
+
+\begin{multline}
+\log(\mathcal{L}_c) = \sum_{j=1}^{n}\sum_{i=1}^{7}I(Z_j = G_i) [  \log(\tilde{\theta_i}) + \sum_k I(Y_{ij} = k)\\ \sum_{t=1}^{150}
+[ m_{ijkt} \log(P_{et} + (1-m_{ijkt})log(1-P_{et}) ]] 
+\end{multline}
+
+We reparameterize using $\tilde{\theta_i} = \frac{\theta_i}{n_i-150+1}$.
+
+Similarly to \ref{qst1:prt2}, $\Theta$ and $P_{et}$ are all separable. For each $t$, we can get 
+\begin{align}
+P_{et} = \frac{\sum_{j=1}^{n}\sum_{i=1}^{7}\sum_{k}P(Y_{ij} = k)P(Z_j = G_i) m_{ijkt}} {\sum_{j=1}^{n}\sum_{i=1}^{7}\sum_{k}P(Y_{ij} = k)P(Z_j = G_i)} 
+\end{align}
+
+And for each $i$, we get 
+\begin{align}
+\tilde{\theta_i} = \frac{\sum_{j=1}^{n} P(Z_j = G_i)}{n}
+\end{align}
+
+Lastly, we have
+\begin{align}
+P(Y_{ij}=k) = \frac{ \prod_{t=1}^{150} (P_{et}^*)^{m_{ijkt}} (1- P_{et}^*) ^{1- m_{ijkt}} } { \sum_{k} \left[ \prod_{t=1}^{150} (P_{et}^*)^{m_{ijkt}} (1- P_{et}^*) ^{1- m_{ijkt}}\right]}
+\end{align}
+
+\begin{align}
+P(Z_j = G_i) = \frac{\tilde{\theta_i}^* \sum_{k} \left[ \prod_{t=1}^{150} (P_{et}^*)^{m_{ijkt}} (1- P_{et}^*) ^{1- m_{ijkt}} \right] }{\sum_{w=1}^{7} \left[ \tilde{\theta_w}^* \sum_{k} \left[ \prod_{t=1}^{150} (P_{et}^*)^{m_{wjkt}} (1- P_{et}^*) ^{1- m_{wjkt}} \right] \right]} 
+\end{align}
+
+\end{solution}
+
+
+\part 
+Implement the EM algorithm and fit the data from Blackboard.
+To simplify the analysis, please ignore the quality scores.
+What are the estimated error probabilities?  Based on these error properties, do the data appear to be of poor quality?
+What are the transcript relative abundances?  Which transcript is most abundant?
+Can you identify the likely source gene of most reads?
+
+(\textbf{Hint:} There are several clues in the data that would not be available in real data, but may help you verify that you are on the right track.)
+
+\part
+How could you estimate the uncertainty in the transcript abundance levels?
+
+\end{parts}
+
+\question\label{qst2}
+In this question, you will get some experience with phylogenetic inference.
+
+\begin{parts}
+\part\label{qst2:prt1}
+One aspect of evolution that we had not considered in our models is the possibility of site-to-site rate variation (see Primary Literature Yang1996b for a short introduction).
+It is a well-known feature of homologous sequence data that some sites are more conserved than others.
+The most common method to account for this variation is to allow independent, gamma-distributed rate multipliers for each site.
+Thus, let $R_1,R_2,\ldots,R_l \stackrel{\mbox{\scriptsize iid}}{\sim} \mbox{Gamma}(\alpha,\alpha)$ be the relative rates of evolution at each site in an alignment of length $l$.
+If $Q$ is the instantaneous rate matrix, then the transition probabilities for site $m$ along a branch length of evolutionary time $t$, \textit{conditional} on $R_m$, is
+\[
+	P\left[ X_m(t) = j \mid X_m(0) = i, R_m\right] = \{e^{QR_mt}\}_{i,j}.
+\]
+Since the Gamma mean $\E[R_m] = \frac{\alpha}{\alpha} = 1$, the expected number of mutations in one unit of time at site $j$ is still
+\[
+	\E\left[-\sum_{b\in\{A,C,G,T\}} \pi_b q_{ii} R_j\right] = -\sum_{b\in\{A,C,G,T\}} \pi_b q_{ii} = 1
+\]
+if $Q$ has been scaled appropriately.
+So, time $t$ is still ``evolutionary time'' despite the random rate variation.
+
+Unfortunately, the presence of random variable $R_m$ is problematic.
+Now, the transition probability matrix we need for the likelihood is
+\[
+	P\left[ X_m(t) = j \mid X_m(0) = i\right] = \int_0^\infty P\left[ X_m(t) = j \mid X_m(0) = i, R_m=r\right] f(r\mid \alpha)dr,
+\]
+where $f(r\mid\alpha)$ is the Gamma density.
+This integral is not possible to resolve unless you are working with one of the few CTMC models that has a closed form solution for the transition probability matrix.
+It might be possible to use the EM algorithm since the nasty integral disappears if we know the \textit{hidden} data $R_m$, but there is an easier \textit{approximation} that people use instead.
+
+Instead of using the continuous Gamma distribution, the rates are ``discretized'' into (typically) four categories with equal weight.
+Let $\mbox{dGamma}(\alpha)$ be the discretized Gamma distribution, for example, it might have pmf
+\[
+	P\left[R_m = q_{0.2}\right] = P\left[R_m = q_{0.4}\right] = P\left[R_m = q_{0.6}\right] = P\left[R_m = q_{0.8}\right] = 0.25,
+\]
+where $q_p$ is the $p$-quantile of Gamma$(\alpha,\alpha)$.
+Then, the integral is replaced with a tractable sum
+\footnotesize
+\[
+	P\left[ X_m(t) = j \mid X_m(0) = i\right] = \sum_{p\in\{0.2,0.4,0.6,0.8\}} P\left[ X_m(t) = j \mid X_m(0) = i, R_m=q_p\right] P\left[R_m = q_{p}\right]dr.
+\]
+\normalsize
+In the end, four transition probabilities need to be computed for every branch/site instead of just one, but it is far easier than integrating over infinitely many transition probabilities!
+
+Use this approximation to write a formula for the likelihood of the following data shown in Newick tree format assuming the Jukes-Cantor model with four rate categories and $\alpha=0.01$.
+To be clear, the data are a two-site alignment of four sequences and the branchlengths are measured in expected number of mutations.
+\[
+	((AA:0.01,AC:0.04):0.03, (GG:0.03,GC:0.05):0.02);
+\]
+
+
+\begin{solution}
+After normalizing Jukes-Cantor rate matrix $Q$, we have a constant matrix:
+\[
+  \begin{pmatrix}
+  -1 & 1/3 & 1/3 & 1/3 \\
+  1/3 & -1 & 1/3 & 1/3 \\
+  1/3 & 1/3 & -1 & 1/3 \\
+  1/3 & 1/3 & 1/3 & -1 
+  \end{pmatrix}
+\]
+
+The transition probability matrix for one time unit is $P(t=1) = e^{R_mQ} $, denoted by $P$. $P$ can be computed through
+spectral decomposition:
+\[ P = U \cdot \mbox{diag} \{e^{\lambda_1},...,e^{\lambda_n}\} \cdot U^{'}\] 
+ 
+where $\lambda_i$ are the eigenvalues of $R_mQ$ and $U$ contains the eigenvectors of $R_mQ$. 
+Using the discretized Gamma distribution we can calculate $P$ when $\alpha = 0.1 $.
+
+%\[
+%  P = \begin{pmatrix}
+%   0.87768706 & 0.04077098 & 0.04077098 & 0.04077098 \\
+%   0.04077098 & 0.87768706 & 0.04077098 & 0.04077098 \\
+%   0.04077098 & 0.04077098 & 0.87768706 & 0.04077098 \\
+%   0.04077098 & 0.04077098 & 0.04077098 & 0.87768706 
+%   \end{pmatrix}
+%\]
+
+consider the tree with unknown state $X$, $Y$ and root, 
+\[
+  ((AA:0.01,AC:0.04) X:0.03, (GG:0.03,GC:0.05) Y:0.02);
+\]
+
+We can write down the likelihood for each site. For example, for the first site we have
+\[
+  L_1 = \sum_{root}\sum_{X}\sum_{Y}\pi_{root}P_{root,X}(0.03)P_{X,A}(0.01)P_{X,A}(0.04)P_{root, Y}(0.02)P_{Y,G}(0.03)P_{Y,G}(0.05)
+\]
+
+Computing this likelihood is not trivial. Just like forward/backward algorithm for HMM, dynamic programming is commonly used to compute this likelihood.  Traverse the tree bottom-up from the leaves to the root and compute the conditional likelihood $L_X(v)$ as the likelihood of the subtree below $v$ given that the character state in $v$ is X. The final log likelihood for this question is -53.0091. The following code is used to compute the transition matrix $P$ for one time unit. 
+
+<<>>==
+JC_Q = matrix(c(-1,1/3,1/3,1/3, 1/3, -1, 1/3, 1/3 ,1/3, 1/3, 
+             -1, 1/3 ,1/3, 1/3, 1/3, -1), nrow=4, byrow=T)
+q = qgamma(c(0.2,0.4,0.6,0.8), rate=0.1, shape=0.1)
+discretize = function(Q, R_m){
+  M = Q*R_m;
+  P_T= eigen(M)$vectors %*% diag( exp(eigen(M)$value) ) %*% 
+       t(eigen(M)$vectors);
+  list(P=P_T);
+}
+
+yang1996b = 1/4 * ( discretize(JC_Q, q[1])$P + discretize(JC_Q, q[2])$P+ 
+                    discretize(JC_Q, q[3])$P + discretize(JC_Q, q[4])$P)
+yang1996b
+@
+
+\end{solution}
+
+\part\label{qst2:prt2}
+Now, use RAxML to estimate the phylogeny for the seven sequences from question \ref{qst1} under the GTR model with gamma distributed rates.
+You will have to align the sequences first, and I invite you to use your favorite multiple sequence aligner and report it and how you used it (default settings?).
+Be sure to perform a bootstrap to get bootstrap support values for each branch in the phylogeny.
+According to Efron1996 (in Primary Literature), the bootstrap support divided by the number of bootstrap trials for a branch is roughly the (posterior) probability that the branch actually exists in the true tree after having observed the data and starting with no (prior) knowledge at all about the existence of the branch before seeing the data. 
+Would you say the phylogeny you inferred is well-supported by the data?
+
+(\textbf{Hint:} Consider \href{http://tree.bio.ed.ac.uk/software/figtree/}{FigTree} for displaying the tree.
+When you load the bootstrapped tree into FigTree it will notice the bootstrap values and ask you to provide a label to identify them.
+Later, you can opt to display branch labels and specifically display the values assigned the label you specified above.
+If you prefer some other tree visualizer, you may use it, but notice that a later problem will require you to be able to root the tree and get branchlengths, which FigTree can do.)
+
+\part\label{qst2:prt3}
+Repeat the analysis using the HKY85 model of evolution with gamma distributed rates (see option \texttt{--HKY85}).
+Does the GTR$+\Gamma$ model offer a significantly better fit to the data than the HKY85$+\Gamma$ model?
+Do more than speculate; please run a test.
+Do the branch supports change (more than you would expect by chance) with the assumed model?
+
+(\textbf{Note:} Apparently RAxML does not consider models without gamma distributed rates.
+If you want to consider models with homogeneous rates, then see \texttt{PhyML}.)
+
+\end{parts}
+
+\question\label{qst3}
+
+While we have not covered Bayesian methods, Bayesian phylogenetic methods are quite popular.
+In this question, you will look at the results of two Bayesian inferences in order to experience some of the oft-overlooked challenges and contradictions in phylogenetic inference.
+\begin{center}
+\begin{tabular}{cc}
+%\includegraphics[width=2.3in]{ywhae_mrbayes} &
+%\includegraphics[width=3in]{ywhae_bali} 
+\end{tabular}
+\end{center}
+
+\begin{parts}
+\part\label{qst3:prt1}
+The tree on the left is inferred from amino acid sequences (translated from the nucleotide sequences you analyzed in~\ref{qst2}) by RAxML using the LG amino acid substitution model.
+You can read more about the LG model from the authors who estimated it [Primary literature: Le2008b]; the model section is a nice review of CTMC, repeating much of what we covered in class for nucleotide models, plus the concept of variable rates (covered in question~\ref{qst2}) and invariant sites, a small extension to the variable sites model.
+Does this tree differ from the nucleotide sequence tree?
+
+\part\label{qst3:prt2}
+The labels on the branches are the Bayesian equivalents of the bootstrap support; they are the probabilities that the branches exist in the true tree given the data, which is what bootstrap support proportions are also supposed to be estimating.
+Do you notice a systematic difference between the probabilities and the bootstrap support values?
+Do you think this could be explained by the different data analyzed?
+
+\part\label{qst3:prt3}
+The tree on the right is inferred using Baliphy, software that simultaneously estimates alignment and phylogeny using Bayesian methods.
+The tree shown is estimated under the LG model of nucleotide substitution.
+Are there supported contradictions between these two trees?
+Why might there be differences between the trees?
+
+%raxml -m PROTGAMMAAUTO -s ywhae.aa.muscle.fsa -p $RANDOM -n AUTO
+%raxml -m PROTGAMMARTREVF -s ywhae.aa.muscle.fsa -p $RANDOM -n bs -b $RANDOM -# 1000
+%raxml -m PROTGAMMARTREVF -s ywhae.aa.muscle.fsa -p $RANDOM -n consensus -f b -z RAxML_bootstrap.bs -t RAxML_bestTree.AUTO
+
+
+\end{parts}
+
+\question\label{qst4}
+<<, echo=F,include=F, cache=T>>=
+sim.branch <- function(X, time, mu, lambda) {
+	t <- 0
+	while (t < time) {
+		t <- t + rexp(1, mu + lambda)
+		if (t > time)
+			break
+		if (rbinom(1, size=1, prob=lambda/(lambda+mu)) == 1) {
+			X <- X + 1
+		} else if (X > 0) {
+			X <- X - 1
+		}
+	}
+	return(X)
+}
+# ((ENSP00000306330:0.1956,ENSP00000248975:0.1554):0.2445,((ENSP00000371267:0.1574,ENSP00000340989:0.4966):0.1189,(ENSP00000361930:0.2620,ENSP00000379287:0.2270):0.0230):0.1204,ENSP00000264335:0.6464);
+#                      *                       +                       +       *       *
+t <- c(0.1956, 0.1554, 0.2445, 0.1574, 0.4966, 0.1189, 0.2620, 0.2270, 0.0230, 0.1204, 0.6464)
+lambda <- 16
+mu <- 10
+X <- NULL
+X[1] <- 1
+X[9] <- sim.branch(X[1], t[3], mu, lambda)
+X[10] <- sim.branch(X[1], t[10], mu, lambda)
+X[8] <- sim.branch(X[1], t[11], mu, lambda)
+X[2] <- sim.branch(X[9], t[1], mu, lambda)
+X[3] <- sim.branch(X[9], t[2], mu, lambda)
+X[11] <- sim.branch(X[10], t[6], mu, lambda)
+X[12] <- sim.branch(X[10], t[9], mu, lambda)
+X[4] <- sim.branch(X[11], t[4], mu, lambda)
+X[5] <- sim.branch(X[11], t[5], mu, lambda)
+X[6] <- sim.branch(X[12], t[7], mu, lambda)
+X[7] <- sim.branch(X[12], t[8], mu, lambda)
+@
+In modern bioinformatics, we would often like to combine multiple types of data to answer important biological questions.
+For example, we may be interested in how the presence of transcription factor (TF) binding sites in the promoter of genes affects the expression of genes.
+Suppose you are interested in a particular TF for which you have discovered the following number of binding sites upstream of the genes used throughout this homework.
+\begin{center}
+\begin{tabular}{cc}
+\bf Gene			& \bf TF Binding Site Copies \\
+\hline
+\verb|ENSP00000306330_Hsap/1-741|	& \Sexpr{X[2]} \\
+\verb|ENSP00000248975_Hsap/1-738|	& \Sexpr{X[3]} \\
+\verb|ENSP00000371267_Hsap/1-735|	& \Sexpr{X[4]} \\
+\verb|ENSP00000340989_Hsap/1-744|	& \Sexpr{X[5]} \\
+\verb|ENSP00000361930_Hsap/1-738|	& \Sexpr{X[6]} \\
+\verb|ENSP00000379287_Hsap/1-735|	& \Sexpr{X[7]} \\
+\verb|ENSP00000264335_Hsap/1-765|	& \Sexpr{X[8]} \\
+\hline
+\end{tabular}
+\end{center}
+
+Count data like these can be modeled using a homogeneous birth/death model, $\{X(t)\in\mathbb{N}: t\geq0\}$, where the state in the counting numbers $\mathbb{N} = \{0,1,2,\ldots\}$ is the number of TF binding sites.
+Since the birth/death model is a CTMC on the infinite state space of counting integers $\{0,1,2,\ldots\}$, the $Q$ matrix is infinite in size, but it is mostly filled with zeros.
+The model assumes the instantaneous rate of ``birthing'' a new TF binding site is $\lambda$ and the instantaneous rate of ``losing'' an existing TF binding site is $\mu$.
+Both rates only make sense biologically when $X(t)\geq1$, because you cannot lose a binding site that does not exist and it is considerably harder to birth a binding site when there are no others from which it can be copied, presumably in some kind of duplication event.
+There could be some possibility of generating a new binding site from scratch, or by duplication from another gene, but in this problem, we will assume that once all TF binding sites are lost in the promoter of a gene, no binding site can spontaneously appear.
+There is no equilibrium distribution for this process: either all binding sites will be lost or they will grow without bound.
+Because of this fact, it is not a particularly realistic model in the long run, but we will be using it over a relatively short evolutionary time scale where the assumption may be reasonable.
+
+\begin{parts}
+\part\label{qst4:prt1}
+
+
+Take the tree and branchlengths you inferred in question~\ref{qst2} for the DNA sequence alignment under the best supported model (of the two) you tested.
+Conditioning on this tree topology and branchlengths, the goal of this problem is to compute and maximize the likelihood of the data under the posed birth/death CTMC. 
+
+There are a couple of important differences between the birth/death CTMC and the finite state CTMCs we discussed in class.
+Since there is no equilibrium distribution, (1) you cannot use it for the initial state distribution, and (2) the model cannot be time reversible, and you cannot root the tree wherever you would like.
+I will propose solutions for both problems.
+
+\begin{enumerate}
+\item Rather than estimate the initial state distribution, I recommend you treat the initial state $X(0)$ at the root of the tree as an additional parameter to be estimated.
+While there are infinitely many choices of $X(0)\in\mathbb{N}$, many will not be at all plausible given the data, will contribute little to the total likelihood, and thus can be considered \textit{effectively} impossible (zero likelihood).
+
+\item The CTMC must start in time $0$ at the root, but the tree you estimated in question~\ref{qst2} was unrooted since both GTR$+\Gamma$ and HKY85$+\Gamma$ are time reversible.
+Rooting a tree is notoriously difficult, and we won't get into a thorough discussion of methods here.
+One method is called ``midpoint rooting,'' and this method is available in FigTree (under Trees on the left).
+Root your tree using this method and then extract the branchlengths by displaying them instead of the bootstrap numbers (under Branch Labels on the right).
+\end{enumerate}
+
+Condition on these branch lengths to maximize the likelihood over $\lambda, \mu$, and $X(0)$.
+I am asking for numerical optimization: \R's \texttt{optim()} is useful for this purpose.
+
+(\textbf{Note:} Undoubtedly there is software to perform this estimation (I myself may have pointed you to some), but the goal of this question is to practice the machinations around CTMC model building and inference, so please do your own thinking and write your own code, rather than copy from existing papers and software.)
+
+
+\part\label{qst4:prt2}
+One of the genes, \verb|ENSP00000361930_Hsap/1-738|, has no instances of the binding site in its promoter.
+If all other gene expressions correlated with the number of binding sites, but \verb|ENSP00000361930_Hsap/1-738|'s did not, for example its expression might be unusually high despite the lack of binding sites, you might hypothesize that its regulation had changed relative to the others.
+You might go on to hypothesize that once the binding sites had become defunct, they were lost rapidly in evolution, or in fact they may have been selected out of the promoter, since they could interfere with the new regulation system for this gene.
+How could you test if the death rate $\mu$ on the branch length leading to sequence \verb|ENSP00000361930_Hsap/1-738| was unusually high compared to the death rate elsewhere in the phylogeny?
+(You do not need to implement your proposed test, but please elaborate on the details, such as what test statistic you would use and what its sampling distribution is under the null.)
+
+
+
+\end{parts}
+
+
+\end{questions}
+
+\end{document}
