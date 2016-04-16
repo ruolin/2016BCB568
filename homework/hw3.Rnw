@@ -1,6 +1,6 @@
 \documentclass[12pt,addpoints]{exam}
 % uncomment for exam with solutions
-%\printanswers
+\printanswers
 %\pointsinmargin
 %\marginpointname{ pts}
 \bracketedpoints
@@ -68,11 +68,59 @@ Suppose you know that a read is the (complete) sequence of one of seven possible
 Propose a model that selects a gene at random, in proportion to its unknown relative abundance in the sampled cell population, and generates a complete sequence from the selected gene, with iid sequencing errors occurring with an unknown error probability.
 Carefully define all your notation and write down the (observed data) log likelihood.
 
+\begin{solution}
+ Let $R = \{r_j, j \in 1,...n\}$ denote the observed reads, and $G_i, i\in \left[ 1,2,...,7\right] $ for the 7 possible genes. The unknown parameters for the relative abundances of $G_i$ is $\theta_i$ and, $p_e$ the error probability. The probability of selecting a gene, e.g., $G_i$ is just $\theta_i$. Given a gene $G_i$ and its sequence $S_i$ ($G_i$ and $S_i$ are interchangeable), the event of observing read $r$, which is sequenced from $S_i$ is a set of i.i.d. Bernouli experiments on individual position with the probability of non-matching is $p_e$. Thus, if the length in nucleotide of gene $G_i$ is $n_i$, a known quantity, and the number of mismatches is $m_i$, which is also known. Then we can write the conditional probability of generating the full gene-length read $r$ conditioning on its parent gene being $G_i$, as 
+  \[P(r_j|S_i) = p_e^{m_{ij}}(1-p_e)^{n_i-m_{ij}}\]
+The observed likelihood is 
+\begin{align}
+P(R) &= \prod_{j=1}^{n}\sum_{i=1}^{7}P(r_j|S_i)P(S_i) \\
+     &= \prod_{j=1}^{n}\sum_{i=1}^{7}\theta_i p_e^{m_{ij}}(1-p_e)^{n_i-m_{ij}}
+\end{align}
+The unknown parameters are $\theta_i, i\in \left[ 1,2,...,7\right] $ and $p_e$
+\end{solution}
+
+
 \part\label{qst1:prt2}
 Derive an EM algorithm for the model in part~\ref{qst1:prt1}.
 Carefully define the missing data and specify the complete data log likelihood.
 How do you compute the expected complete data log likelihood in the E step?
 What is the update equation in the M step?
+
+\begin{solution}
+Now we need to introduce the hidden variables $Z_j$ to indicate the true parent transcript for read $r_j$. Consider a set of $n$ read.
+The complete likelihood function
+\begin{align}
+  \mathcal{L}_c &= \prod_{j=1}^{n}\prod_{i=1}^{7} \left[ P(r_j|S_i)P(S_i)\right]^{I(Z_j = G_i)} \\
+  \log(\mathcal{L}_c) &= \sum_{j=1}^{n}\sum_{i=1}^{7} I(Z_j = G_i) ( \log(P(r_j | S_i)) + \log(P(S_i)) \\
+  Q(\Theta, p_e| \Theta^*, p_e^*) &= \sum_{j=1}^{n}\sum_{i=1}^{7} P(Z_j = G_i|r_j,\Theta^*, p_e^*)\left[log(\theta_i) + m_{ij}\log(p_e) + (n_i-m_{ij})log(1-p_e)\right]
+\end{align}
+
+Where $\Theta^*, p_e^*$ stand for the intial estimations or previous estimations. Equation 5 indicates that $\Theta$ and $p_e$ are separable. Let's first derive the EM algorithm for $\Theta$. For simplicity, we write $P(Z_j = G_i |r_j)$ instead of $P(Z_j = G_i|r_j,\Theta^*, p_e^*)$.
+\begin{align}
+Q(\Theta | \Theta^*, p_e^*) = \sum_{j=1}^{n}\sum_{i=1}^{7} P(Z_j = G_i |r_j)\log(\theta_i) + \lambda(1-\sum_{i}\theta_i) 
+\end{align}
+The $\lambda$ is the Lagrangian multiplier. The KKT conditions yield 
+\begin{align}
+  \lambda &= n \\
+  \theta_i &= \frac{\sum_{j=1}^{n}P(Z_j = G_i |r_j)}{n}
+\end{align}
+
+Equation 5 indicates that we can drop the $\theta_i$ term when maximizing over $p_e$. Taking derivative with respect to $p_e$ and equating to 0, we got 
+\begin{align}
+  \sum_{j=1}^{n}\sum_{i=1}^{7}P(Z_j = G_i|r_j)\left[ \frac{m_{ij}}{p_e} + \frac{m_{ij} - n_i }{1- p_e}\right] = 0 \\
+  \frac{\sum_{j=1}^{n}\sum_{i=1}^{7}P(Z_j = G_i |r_j)m_{ij}}{p_e} + \frac{\sum_{j=1}^{n}\sum_{i=1}^{7}P(Z_j = G_i |r_j)(m_{ij} - n_i)}{1-p_e} = 0 \\
+  p_e = \frac{\sum_{i,j}P(Z_j = G_i |r_j)m_{ij}}{\sum_{i,j}P(Z_j = G_i |r_j)n_{ij}} 
+\end{align}
+Thus, equation 8 and 11 indicate the update equation in the M-step. 
+
+Now, let's take a look at what is $P(Z_j = G_i |r_j)$.
+According to the Bayes' rule and conditioning on the previous estimates $\Theta_*, p_e$ 
+\begin{align}
+P(Z_j = G_i |r_j) &= \frac{P(r_j|Z_j = G_i, )P(Z_j = G_i)}{P(r_j)} \\
+                       &= \frac{\theta_i^* (p_e^*)^{m_{ij}}(1-p_e^*)^{n_i-m_{ij}}}{ \sum_k\theta_i^* (p_e^*)^{m_{kj}}(1-p_e^*)^{n_i-m_{kj}} }
+\end{align}
+
+\end{solution}
 
 \part\label{qst1:prt3}
 To make the model more realistic, suppose that the reads do not cover the entire gene, but start at an unknown, but random position in the gene.
@@ -80,9 +128,65 @@ Propose a model that assumes 150-bp reads are uniformly distributed (on both str
 Further, assume that reads are generated with (read) position-specific error probabilities that are unknown (to be estimated).
 Carefully define all your notation and write down the (observed data) log likelihood.
 
+\begin{solution}
+Now we will extend the model \ref{qst1:prt1} to accout for the short reads. Assuming all transcripts are larger than 150bp, the number of possible starting postions for a read on transcript $i$ is $n_i - 150 + 1$, if we assume the read are uniformly generated along a given transcript. Let $ s_{j}$ indicate the starting position for read $r_j$.  $P(r_j|S_j = k, G_i)$ means the probability of a possible alignment of read $r_j$, conditioning on starting at position $k$ at the transcript i. 
+\begin{align}
+  P(r_j |G_i) = \sum_{k}P(r_j|s_j = k, G_i)P(s_j = k|G_i)
+\end{align}
+
+Let $t \in \left[1,...,150\right]$ denote the relative position along a read and $p_{et}$ for the error probability at site $t$. Thus
+
+\begin{align}
+  P(r_j|s_j = k, G_i) = \prod_{t=1}^{150} P_{et}^{m_{ijkt}} (1- P_{et}) ^{1- m_{ijkt}} 
+\end{align}
+where $m_{ijkt} = 1$ if mismatch, and 0 otherwise. 
+The observed likelihood is. 
+\begin{align}
+P(R) &= \prod_{j=1}^{n}\sum_{i=1}^{7}P(r_j|G_i)P(G_i) \\
+     &= \prod_{j=1}^{n}\sum_{i=1}^{7}\theta_i \frac{\sum_{k}\prod_{t=1}^{150} P_{et}^{m_{ijkt}} (1- P_{et}) ^{1- m_{ijkt}} }{n_i-150+1}
+\end{align}
+\end{solution}
+
+
+
 \part 
 Derive an EM algorithm to fit the model from part~\ref{qst1:prt3}.
 Carefully define the missing data, the expected complete data log likelihood (E step) and M step updates.
+\begin{solution}
+Let's introduce hidden variable $Y_{ij}$, which indicates the true start position of generating a read $j$ from transcript $i$. Now We can write the complete data likelihood as
+
+\begin{align}
+\mathcal{L}_c = \prod_{j=1}^{n} \prod_{i=1}^{7} \left[ \frac{\theta_i}{n_i-150+1} \prod_{k} \left[ \prod_{t=1}^{150}P_{et}^{m_{ijkt}}(1-P_{et})^{1-m_{ijkt}} \right]^{Y_{ij} = k}  \right]^{I(Z_j = G_i)} 
+\end{align}
+
+\begin{multline}
+\log(\mathcal{L}_c) = \sum_{j=1}^{n}\sum_{i=1}^{7}I(Z_j = G_i) [  \log(\tilde{\theta_i}) + \sum_k I(Y_{ij} = k)\\ \sum_{t=1}^{150}
+[ m_{ijkt} \log(P_{et} + (1-m_{ijkt})log(1-P_{et}) ]] 
+\end{multline}
+
+We reparameterize using $\tilde{\theta_i} = \frac{\theta_i}{n_i-150+1}$.
+
+Similarly to \ref{qst1:prt2}, $\Theta$ and $P_{et}$ are all separable. For each $t$, we can get 
+\begin{align}
+P_{et} = \frac{\sum_{j=1}^{n}\sum_{i=1}^{7}\sum_{k}P(Y_{ij} = k)P(Z_j = G_i) m_{ijkt}} {\sum_{j=1}^{n}\sum_{i=1}^{7}\sum_{k}P(Y_{ij} = k)P(Z_j = G_i)} 
+\end{align}
+
+And for each $i$, we get 
+\begin{align}
+\tilde{\theta_i} = \frac{\sum_{j=1}^{n} P(Z_j = G_i)}{n}
+\end{align}
+
+Lastly, we have
+\begin{align}
+P(Y_{ij}=k) = \frac{ \prod_{t=1}^{150} (P_{et}^*)^{m_{ijkt}} (1- P_{et}^*) ^{1- m_{ijkt}} } { \sum_{k} \left[ \prod_{t=1}^{150} (P_{et}^*)^{m_{ijkt}} (1- P_{et}^*) ^{1- m_{ijkt}}\right]}
+\end{align}
+
+\begin{align}
+P(Z_j = G_i) = \frac{\tilde{\theta_i}^* \sum_{k} \left[ \prod_{t=1}^{150} (P_{et}^*)^{m_{ijkt}} (1- P_{et}^*) ^{1- m_{ijkt}} \right] }{\sum_{w=1}^{7} \left[ \tilde{\theta_w}^* \sum_{k} \left[ \prod_{t=1}^{150} (P_{et}^*)^{m_{wjkt}} (1- P_{et}^*) ^{1- m_{wjkt}} \right] \right]} 
+\end{align}
+
+\end{solution}
+
 
 \part 
 Implement the EM algorithm and fit the data from Blackboard.
@@ -146,6 +250,64 @@ To be clear, the data are a two-site alignment of four sequences and the branchl
 \[
 	((AA:0.01,AC:0.04):0.03, (GG:0.03,GC:0.05):0.02);
 \]
+
+
+\begin{solution}
+After normalizing Jukes-Cantor rate matrix $Q$, we have a constant matrix:
+\[
+  \begin{pmatrix}
+  -1 & 1/3 & 1/3 & 1/3 \\
+  1/3 & -1 & 1/3 & 1/3 \\
+  1/3 & 1/3 & -1 & 1/3 \\
+  1/3 & 1/3 & 1/3 & -1 
+  \end{pmatrix}
+\]
+
+The transition probability matrix for one time unit is $P(t=1) = e^{R_mQ} $, denoted by $P$. $P$ can be computed through
+spectral decomposition:
+\[ P = U \cdot \mbox{diag} \{e^{\lambda_1},...,e^{\lambda_n}\} \cdot U^{'}\] 
+ 
+where $\lambda_i$ are the eigenvalues of $R_mQ$ and $U$ contains the eigenvectors of $R_mQ$. 
+Using the discretized Gamma distribution we can calculate $P$ when $\alpha = 0.1 $.
+
+%\[
+%  P = \begin{pmatrix}
+%   0.87768706 & 0.04077098 & 0.04077098 & 0.04077098 \\
+%   0.04077098 & 0.87768706 & 0.04077098 & 0.04077098 \\
+%   0.04077098 & 0.04077098 & 0.87768706 & 0.04077098 \\
+%   0.04077098 & 0.04077098 & 0.04077098 & 0.87768706 
+%   \end{pmatrix}
+%\]
+
+consider the tree with unknown state $X$, $Y$ and root, 
+\[
+  ((AA:0.01,AC:0.04) X:0.03, (GG:0.03,GC:0.05) Y:0.02);
+\]
+
+We can write down the likelihood for each site. For example, for the first site we have
+\[
+  L_1 = \sum_{root}\sum_{X}\sum_{Y}\pi_{root}P_{root,X}(0.03)P_{X,A}(0.01)P_{X,A}(0.04)P_{root, Y}(0.02)P_{Y,G}(0.03)P_{Y,G}(0.05)
+\]
+
+Computing this likelihood is not trivial. Just like forward/backward algorithm for HMM, dynamic programming is commonly used to compute this likelihood.  Traverse the tree bottom-up from the leaves to the root and compute the conditional likelihood $L_X(v)$ as the likelihood of the subtree below $v$ given that the character state in $v$ is X. The final log likelihood for this question is -53.0091. The following code is used to compute the transition matrix $P$ for one time unit. 
+
+<<>>==
+JC_Q = matrix(c(-1,1/3,1/3,1/3, 1/3, -1, 1/3, 1/3 ,1/3, 1/3, 
+             -1, 1/3 ,1/3, 1/3, 1/3, -1), nrow=4, byrow=T)
+q = qgamma(c(0.2,0.4,0.6,0.8), rate=0.1, shape=0.1)
+discretize = function(Q, R_m){
+  M = Q*R_m;
+  P_T= eigen(M)$vectors %*% diag( exp(eigen(M)$value) ) %*% 
+       t(eigen(M)$vectors);
+  list(P=P_T);
+}
+
+yang1996b = 1/4 * ( discretize(JC_Q, q[1])$P + discretize(JC_Q, q[2])$P+ 
+                    discretize(JC_Q, q[3])$P + discretize(JC_Q, q[4])$P)
+yang1996b
+@
+
+\end{solution}
 
 \part\label{qst2:prt2}
 Now, use RAxML to estimate the phylogeny for the seven sequences from question \ref{qst1} under the GTR model with gamma distributed rates.
