@@ -8,7 +8,7 @@
 %\qformat{Question \thequestion\dotfill \emph{\totalpoints\ points}}
 
 
-
+\usepackage{listings}
 \usepackage{graphicx}
 \usepackage{multirow}
 \usepackage{comment}
@@ -320,6 +320,18 @@ Would you say the phylogeny you inferred is well-supported by the data?
 When you load the bootstrapped tree into FigTree it will notice the bootstrap values and ask you to provide a label to identify them.
 Later, you can opt to display branch labels and specifically display the values assigned the label you specified above.
 If you prefer some other tree visualizer, you may use it, but notice that a later problem will require you to be able to root the tree and get branchlengths, which FigTree can do.)
+\begin{solution}
+MUSCLE, available at \url{http://www.ebi.ac.uk/Tools/msa/muscle/}, was used for multiple sequences alignment. Default parameters are used. RAxML was run using the following command:
+\begin{lstlisting}[language=bash]
+$raxmlHPC-PTHREADS-SSE3 -f a -s aln-fasta -x 12345 \
+-p 12345 -m GTRGAMMA -T 4 -n GTRGAMMA -# autoMRE
+\end{lstlisting}
+
+Final ML Optimization Likelihood: -4525.957369. 
+
+All RAxML output and FigTree plot are available on github site. 
+\end{solution}
+
 
 \part\label{qst2:prt3}
 Repeat the analysis using the HKY85 model of evolution with gamma distributed rates (see option \texttt{--HKY85}).
@@ -329,6 +341,29 @@ Do the branch supports change (more than you would expect by chance) with the as
 
 (\textbf{Note:} Apparently RAxML does not consider models without gamma distributed rates.
 If you want to consider models with homogeneous rates, then see \texttt{PhyML}.)
+\begin{solution}
+For HKY85 model, RAxML was run using the following command:
+\begin{lstlisting}[language=bash]
+/home/ruolin/git/standard-RAxML/raxmlHPC-PTHREADS-SSE3 \
+-f a -s aln-fasta -x 12345 -p 12345 -m GTRGAMMA -T 4 \
+-n HKY85GAMMA -# autoMRE --HKY85
+\end{lstlisting}
+
+Final ML Optimization Likelihood: -4535.846568. \\
+All RAxML output and FigTree plot are available on github site. 
+
+Since HKY v.s. GTR can be formulated as simple hypothesis, we could use Neyman–Pearson test. But the distribution for that test statistics is unkonw. Instead, we can compute a likelihood ratio test for HYK and GTR model. Formulating GTR as alternative since it has more parameters. The degree of freedom for chi square test is 4. 
+<<>>==
+D = 2 * ( -4525.957369 + 4535.846568 )
+pchisq(D, 4, lower.tail=F)
+@
+
+The p-value is small which favors the GTR model. 
+
+I donot understand the last question: Do the branch supports change (more than you would expect by chance) with the
+assumed model?
+\end{solution}
+
 
 \end{parts}
 
