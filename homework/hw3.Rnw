@@ -19,6 +19,7 @@
 \usepackage{amssymb}
 \usepackage{hyperref}
 \usepackage{blkarray}
+\usepackage[final]{pdfpages}
 
 \DeclareMathOperator*{\E}{\mathbb{E}}
 
@@ -506,8 +507,11 @@ In this question our observed values and states are no longer nucleotides, rathe
 \end{block}
 \end{blockarray}
  \]
+\includegraphics[width=6in]{hw3-data/rooted_RAxML_bipartitions_GTRGAMMA.pdf} 
 
 The label of the $Q$ matrix represents the number of TF binding sites. From question 2\ref{qst2:prt3}, The topology and branch lengthes of GTK model are used in this question. The final estimates by optim are: 
+
+
 \begin{align}
 \lambda = 0.6754873; \\
 \mu = 0.7089056; \\
