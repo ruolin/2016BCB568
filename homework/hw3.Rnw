@@ -18,6 +18,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
+\usepackage{blkarray}
 
 \DeclareMathOperator*{\E}{\mathbb{E}}
 
@@ -489,6 +490,118 @@ I am asking for numerical optimization: \R's \texttt{optim()} is useful for this
 
 (\textbf{Note:} Undoubtedly there is software to perform this estimation (I myself may have pointed you to some), but the goal of this question is to practice the machinations around CTMC model building and inference, so please do your own thinking and write your own code, rather than copy from existing papers and software.)
 
+\begin{solution}
+In this question our observed values and states are no longer nucleotides, rather integers. We can write out the rate matrix $Q$ for the simple birth-depth process, which depends on two unkonwn but fixed parameters $\lambda$ and $\mu$. 
+
+\[
+\begin{blockarray}{ccccccc}
+ & 0 & 1 & 2 & 3 & 4 & ... \\
+\begin{block}{c(cccccc)}
+  0 & 0 & 0 & 0 & 0 & f \\
+  1 & \mu & 0-\mu-\lambda & \lambda & 0 & 0 \\
+  2 & 0 & 2\mu & 0-2\mu-2\lambda & 2\lambda & 0 \\
+  3 & 0 & 0 & 3\mu & 0-3\mu-3\lambda & 3\lambda \\
+  4 & 0 & 0 & 0 & 4\mu & 0-4\mu-4\lambda \\
+  ... & ...& ... &... &... &... \\
+\end{block}
+\end{blockarray}
+ \]
+
+The label of the $Q$ matrix represents the number of TF binding sites. From question 2\ref{qst2:prt3}, The topology and branch lengthes of GTK model are used in this question. The final estimates by optim are: 
+\begin{align}
+\lambda = 0.6754873; \\
+\mu = 0.7089056; \\
+X(0) = 3.25 \approx 3 
+\end{align}
+
+Note the results favor a slightly large number of binding sites at time 0 and a larger depth rate than birth rate. 
+
+<<>>==
+
+
+likelihood = function(para, verbose = F){
+  ## b id birth rate,
+  ## d is death rate,
+  ## x_0 is init state
+  b = para[1];
+  d = para[2];
+  x_0 = para[3];
+  
+  ## assume the rate matrix is 10x10
+  n_states = 15; ## including 0 state
+  Q = matrix(rep(rep(0, n_states), n_states), nrow = n_states);
+  for(i in 2: n_states){
+    for(j in 1: n_states){
+      if(j == i-1) Q[i,j] = (i-1)*d;
+      if(j == i+1) Q[i,j] = (i-1)*b;
+      if(j == i)   Q[i,j] = 0 - (i-1)*b - (i-1)*d;
+    }
+  }
+  if(verbose){
+    print(Q)
+  }
+  ### subtree x3 : 738 & 741 
+  ## L_x3[n_3] indicate the Likelihood of substree rooted at x3, and the state of x3 is n_3
+  ## Note: P matrix index starts from 0
+  L_x3 = rep(0, n_state)
+  for(n_3 in 2: n_states){
+    L_x3[n_3] = expm(Q*0.1497)[n_3, 1+1] * expm(Q*0.1996)[n_3,1+1]
+  }
+  
+  ### subtree x1: 738 & 741 & 765
+  L_x1 = rep(0, n_state)
+  L_x1_left = rep(0, n_state)
+  for( n_1 in 2: n_states){
+    for( n in 2: n_states){
+      L_x1_left[n_1] = L_x1_left[n_1] + expm(Q*0.2294)[n_1, n] * L_x3[n]
+    }
+    L_x1[n_1] = L_x1_left[n_1] * ( expm(Q*0.647)[n_1, 3+1] )
+    #print(L_x1[n_1])
+  }
+  
+  ### subtree x5: 1-735 & 1-744
+  L_x5 = rep(0, n_state)
+  for(n_5 in 2: n_states){
+    L_x5[n_5] = expm(Q*0.1702)[n_5, 2+1] * expm(Q*0.4922)[n_5,4+1]
+  }
+  
+  ### subtree x4: 1-735 & 1-744 & 1-735
+  L_x4 = rep(0, n_state)
+  L_x4_left = rep(0, n_state)
+  for( n_4 in 2: n_states){
+    for( n in 2: n_states){
+      L_x4_left[n_4] = L_x4_left[n_4] + expm(Q*0.1266)[n_4, n] * L_x5[n]
+    }
+    L_x4[n_4] = L_x4_left[n_4] * ( expm(Q*0.2343)[n_4, 4+1] )
+  }
+  
+  ### subtree x4: 1-735 & 1-744 & 1-735 & 1-738
+  L_x2 = rep(0, n_state)
+  L_x2_left = rep(0, n_state)
+  for( n_2 in 2: n_states){
+    for( n in 2: n_states){
+      L_x2_left[n_2] = L_x2_left[n_2] + expm(Q*0.0186)[n_2, n] * L_x4[n]
+    }
+    L_x2[n_2] = L_x2_left[n_2] * ( expm(Q*0.2503)[n_2, 0+1] )
+  }
+  
+  
+  ### The final tree
+  L_x0_left = 0;
+  L_x0_right = 1;
+  for( n in 2: n_states){
+    L_x0_left = L_x0_left + expm(Q*0.0497)[x_0, n] * L_x1[n];
+    L_x0_right = L_x0_right + expm(Q*0.0592)[x_0, n] * L_x2[n];
+  }
+  L_x0 = L_x0_left * L_x0_right;
+  L_x0
+}
+
+suppressWarnings( optim(c(0.1, 0.2 , 3), likelihood, control=list(fnscale = -1)) )
+
+@
+
+\end{solution}
 
 \part\label{qst4:prt2}
 One of the genes, \verb|ENSP00000361930_Hsap/1-738|, has no instances of the binding site in its promoter.
