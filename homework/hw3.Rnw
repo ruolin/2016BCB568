@@ -511,12 +511,14 @@ The label of the $Q$ matrix represents the number of TF binding sites. From ques
 \begin{align}
 \lambda = 0.6754873; \\
 \mu = 0.7089056; \\
-X(0) = 3.25 \approx 3 
+X(0) = 2.554 \approx 3 
 \end{align}
 
 Note the results favor a slightly large number of binding sites at time 0 and a larger depth rate than birth rate. 
 
 <<>>==
+
+
 
 
 likelihood = function(para, verbose = F){
@@ -590,14 +592,18 @@ likelihood = function(para, verbose = F){
   L_x0_left = 0;
   L_x0_right = 1;
   for( n in 2: n_states){
-    L_x0_left = L_x0_left + expm(Q*0.0497)[x_0, n] * L_x1[n];
-    L_x0_right = L_x0_right + expm(Q*0.0592)[x_0, n] * L_x2[n];
+    L_x0_left = L_x0_left + expm(Q*0.0497)[x_0+1, n] * L_x1[n];
+    L_x0_right = L_x0_right + expm(Q*0.0592)[x_0+1, n] * L_x2[n];
   }
   L_x0 = L_x0_left * L_x0_right;
   L_x0
 }
 
-suppressWarnings( optim(c(0.1, 0.2 , 3), likelihood, control=list(fnscale = -1)) )
+suppressWarnings( optim(c(0.1, 0.1, 2), likelihood, 
+                        control=list(fnscale = -1), 
+                        lower=c(0,0,1),
+                        method = "L-BFGS-B") 
+                  )
 
 @
 
